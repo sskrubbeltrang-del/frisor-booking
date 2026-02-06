@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frisør Booking</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Karla:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2c1810;
+            --accent: #d4a574;
+            --bg: #faf8f6;
+            --card: #ffffff;
+            --text: #2c1810;
+            --border: #e8e3dd;
+            --shadow: rgba(44, 24, 16, 0.08);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Karla', sans-serif;
+            background: linear-gradient(135deg, #faf8f6 0%, #f5f0ea 100%);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 2rem 1rem;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            animation: fadeInDown 0.8s ease;
+        }
+
+        h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 3rem;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .tagline {
+            font-size: 1.1rem;
+            color: var(--accent);
+            font-weight: 300;
+            letter-spacing: 0.05em;
+        }
+
+        .booking-card {
+            background: var(--card);
+            border-radius: 20px;
+            padding: 2.5rem;
+            box-shadow: 0 10px 40px var(--shadow);
+            animation: fadeInUp 0.8s ease 0.2s backwards;
+        }
+
+        .section {
+            margin-bottom: 2rem;
+        }
+
+        .section-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 24px;
+            background: var(--accent);
+            border-radius: 2px;
+        }
+
+        .services {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .service-option {
+            background: var(--bg);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .service-option::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, var(--accent) 0%, transparent 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .service-option:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px var(--shadow);
+        }
+
+        .service-option.selected {
+            border-color: var(--accent);
+            background: rgba(212, 165, 116, 0.1);
+        }
+
+        .service-option.selected::before {
+            opacity: 0.05;
+        }
+
+        .service-name {
+            font-weight: 500;
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+            position: relative;
+        }
+
+        .service-details {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            color: #6b5d54;
+            position: relative;
+        }
+
+        .calendar {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .calendar-header {
+            text-align: center;
+            font-weight: 500;
+            padding: 0.75rem;
+            color: var(--accent);
+            font-size: 0.85rem;
+            letter-spacing: 0.05em;
+        }
+
+        .calendar-day {
+            aspect-ratio: 1;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: var(--bg);
+            font-weight: 400;
+        }
+
+        .calendar-day:hover:not(.disabled):not(.empty) {
+            background: rgba(212, 165, 116, 0.2);
+            border-color: var(--accent);
+            transform: scale(1.05);
+        }
+
+        .calendar-day.selected {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+            font-weight: 500;
+        }
+
+        .calendar-day.disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .calendar-day.empty {
+            border: none;
+            cursor: default;
+        }
+
+        .time-slots {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .time-slot {
+            padding: 1rem;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: var(--card);
+            font-weight: 400;
+        }
+
+        .time-slot:hover:not(.booked) {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+        }
+
+        .time-slot.selected {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        .time-slot.booked {
+            opacity: 0.4;
+            cursor: not-allowed;
+            background: #f0f0f0;
+        }
+
+        .contact-form {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        label {
+            font-weight: 500;
+            color: var(--primary);
+            font-size: 0.95rem;
+        }
+
+        input, textarea {
+            padding: 1rem;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-family: 'Karla', sans-serif;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+            background: var(--bg);
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+            background: white;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .submit-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 1.25rem 2.5rem;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Karla', sans-serif;
+            letter-spacing: 0.02em;
+            margin-top: 1rem;
+            position: relative;
+        }
+
+        .submit-btn:hover:not(:disabled) {
+            background: #1a0f0a;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(44, 24, 16, 0.3);
+        }
+
+        .submit-btn:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .submit-btn.loading {
+            opacity: 0.7;
+            cursor: wait;
+        }
+
+        .submit-btn.loading::after {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            top: 50%;
+            right: 20px;
+            margin-top: -8px;
+            border: 2px solid white;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .summary {
+            background: linear-gradient(135deg, rgba(212, 165, 116, 0.1) 0%, rgba(212, 165, 116, 0.05) 100%);
+            padding: 1.5rem;
+            border-radius: 12px;
+            border-left: 4px solid var(--accent);
+            margin-bottom: 1.5rem;
+        }
+
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            font-size: 1rem;
+        }
+
+        .summary-item strong {
+            color: var(--primary);
+        }
+
+        .confirmation {
+            text-align: center;
+            padding: 3rem;
+            animation: fadeInUp 0.6s ease;
+        }
+
+        .confirmation h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.5rem;
+            color: var(--accent);
+            margin-bottom: 1rem;
+        }
+
+        .confirmation-icon {
+            font-size: 4rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .error-message {
+            background: #fee;
+            color: #c33;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            border-left: 4px solid #c33;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .booking-card {
+                padding: 1.5rem;
+            }
+            
+            .services {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Frisør Booking</h1>
+            <p class="tagline">Book din næste frisørtid</p>
+        </header>
+
+        <div class="booking-card">
+            <div id="bookingForm">
+                <!-- Step 1: Service Selection -->
+                <div class="section">
+                    <h2 class="section-title">Vælg behandling</h2>
+                    <div class="services">
+                        <div class="service-option" data-service="klipning" data-duration="45" data-price="350">
+                            <div class="service-name">Klipning</div>
+                            <div class="service-details">
+                                <span>45 min</span>
+                                <span>350 kr</span>
+                            </div>
+                        </div>
+                        <div class="service-option" data-service="farvning" data-duration="120" data-price="600">
+                            <div class="service-name">Farvning</div>
+                            <div class="service-details">
+                                <span>2 timer</span>
+                                <span>600 kr</span>
+                            </div>
+                        </div>
+                        <div class="service-option" data-service="fohn" data-duration="30" data-price="200">
+                            <div class="service-name">Føn</div>
+                            <div class="service-details">
+                                <span>30 min</span>
+                                <span>200 kr</span>
+                            </div>
+                        </div>
+                        <div class="service-option" data-service="highlights" data-duration="150" data-price="800">
+                            <div class="service-name">Highlights</div>
+                            <div class="service-details">
+                                <span>2½ timer</span>
+                                <span>800 kr</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 2: Date Selection -->
+                <div class="section">
+                    <h2 class="section-title">Vælg dato</h2>
+                    <div class="calendar" id="calendar"></div>
+                </div>
+
+                <!-- Step 3: Time Selection -->
+                <div class="section">
+                    <h2 class="section-title">Vælg tidspunkt</h2>
+                    <div class="time-slots" id="timeSlots"></div>
+                </div>
+
+                <!-- Step 4: Contact Info -->
+                <div class="section">
+                    <h2 class="section-title">Dine oplysninger</h2>
+                    <div class="contact-form">
+                        <div class="form-group">
+                            <label for="name">Navn *</label>
+                            <input type="text" id="name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="phone">Telefon *</label>
+                            <input type="tel" id="phone" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="email">Email</label>
+                            <input type="email" id="email">
+                        </div>
+                        <div class="form-group">
+                            <label for="notes">Bemærkninger</label>
+                            <textarea id="notes" placeholder="Særlige ønsker eller bemærkninger..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Summary -->
+                <div class="summary" id="summary" style="display: none;">
+                    <div class="summary-item">
+                        <span>Behandling:</span>
+                        <strong id="summaryService">-</strong>
+                    </div>
+                    <div class="summary-item">
+                        <span>Dato:</span>
+                        <strong id="summaryDate">-</strong>
+                    </div>
+                    <div class="summary-item">
+                        <span>Tidspunkt:</span>
+                        <strong id="summaryTime">-</strong>
+                    </div>
+                    <div class="summary-item">
+                        <span>Pris:</span>
+                        <strong id="summaryPrice">-</strong>
+                    </div>
+                </div>
+
+                <div id="errorMessage" class="error-message" style="display: none;"></div>
+
+                <button class="submit-btn" id="submitBtn" disabled>Book tid</button>
+            </div>
+
+            <div id="confirmation" style="display: none;">
+                <div class="confirmation">
+                    <div class="confirmation-icon">✓</div>
+                    <h2>Booking bekræftet!</h2>
+                    <p style="font-size: 1.1rem; margin: 1rem 0;">Din tid er nu reserveret.</p>
+                    <div class="summary" style="text-align: left; margin-top: 2rem;">
+                        <div class="summary-item">
+                            <span>Behandling:</span>
+                            <strong id="confirmService">-</strong>
+                        </div>
+                        <div class="summary-item">
+                            <span>Dato:</span>
+                            <strong id="confirmDate">-</strong>
+                        </div>
+                        <div class="summary-item">
+                            <span>Tidspunkt:</span>
+                            <strong id="confirmTime">-</strong>
+                        </div>
+                        <div class="summary-item">
+                            <span>Navn:</span>
+                            <strong id="confirmName">-</strong>
+                        </div>
+                    </div>
+                    <button class="submit-btn" onclick="location.reload()" style="margin-top: 2rem;">Book ny tid</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ⚙️ KONFIGURATION - Skift denne URL til din Google Apps Script URL
+        const SCRIPT_URL = 'INDSÆT_DIN_GOOGLE_SCRIPT_URL_HER';
+        
+        // Booking state
+        let booking = {
+            service: null,
+            serviceName: null,
+            duration: null,
+            price: null,
+            date: null,
+            time: null
+        };
+
+        // Generate calendar
+        function generateCalendar() {
+            const calendar = document.getElementById('calendar');
+            const weekdays = ['Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn'];
+            
+            // Add weekday headers
+            weekdays.forEach(day => {
+                const header = document.createElement('div');
+                header.className = 'calendar-header';
+                header.textContent = day;
+                calendar.appendChild(header);
+            });
+
+            const today = new Date();
+            const startDate = new Date(today);
+            const daysToShow = 35;
+            
+            // Get the first day of the month
+            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+            const startDay = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1;
+            
+            // Add empty cells for days before the month starts
+            for (let i = 0; i < startDay; i++) {
+                const emptyDay = document.createElement('div');
+                emptyDay.className = 'calendar-day empty';
+                calendar.appendChild(emptyDay);
+            }
+
+            // Add actual days
+            for (let i = 0; i < daysToShow; i++) {
+                const date = new Date(firstDay);
+                date.setDate(firstDay.getDate() + i);
+                
+                const dayElement = document.createElement('div');
+                dayElement.className = 'calendar-day';
+                dayElement.textContent = date.getDate();
+                
+                // Disable past dates and Sundays
+                if (date < today || date.getDay() === 0) {
+                    dayElement.classList.add('disabled');
+                } else {
+                    dayElement.addEventListener('click', () => selectDate(date, dayElement));
+                }
+                
+                calendar.appendChild(dayElement);
+            }
+        }
+
+        // Select date
+        function selectDate(date, element) {
+            document.querySelectorAll('.calendar-day').forEach(d => d.classList.remove('selected'));
+            element.classList.add('selected');
+            booking.date = date;
+            loadBookedTimes(date);
+            updateSummary();
+        }
+
+        // Load booked times from Google Sheets
+        async function loadBookedTimes(date) {
+            const timeSlotsContainer = document.getElementById('timeSlots');
+            timeSlotsContainer.innerHTML = '<p>Indlæser ledige tider...</p>';
+            
+            try {
+                const dateStr = date.toISOString().split('T')[0];
+                const response = await fetch(`${SCRIPT_URL}?action=getBookings&date=${dateStr}`);
+                const data = await response.json();
+                
+                generateTimeSlots(data.bookedTimes || []);
+            } catch (error) {
+                console.error('Fejl ved indlæsning af bookinger:', error);
+                // Fall back to generating slots without booked times
+                generateTimeSlots([]);
+            }
+        }
+
+        // Generate time slots
+        function generateTimeSlots(bookedTimes = []) {
+            const timeSlotsContainer = document.getElementById('timeSlots');
+            timeSlotsContainer.innerHTML = '';
+            
+            const slots = ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'];
+            
+            slots.forEach(time => {
+                const slot = document.createElement('div');
+                slot.className = 'time-slot';
+                slot.textContent = time;
+                
+                if (bookedTimes.includes(time)) {
+                    slot.classList.add('booked');
+                    slot.textContent += ' (optaget)';
+                } else {
+                    slot.addEventListener('click', () => selectTime(time, slot));
+                }
+                
+                timeSlotsContainer.appendChild(slot);
+            });
+        }
+
+        // Select time
+        function selectTime(time, element) {
+            document.querySelectorAll('.time-slot').forEach(t => t.classList.remove('selected'));
+            element.classList.add('selected');
+            booking.time = time;
+            updateSummary();
+        }
+
+        // Service selection
+        document.querySelectorAll('.service-option').forEach(option => {
+            option.addEventListener('click', function() {
+                document.querySelectorAll('.service-option').forEach(o => o.classList.remove('selected'));
+                this.classList.add('selected');
+                
+                booking.service = this.dataset.service;
+                booking.serviceName = this.querySelector('.service-name').textContent;
+                booking.duration = this.dataset.duration;
+                booking.price = this.dataset.price;
+                
+                updateSummary();
+            });
+        });
+
+        // Update summary
+        function updateSummary() {
+            const summary = document.getElementById('summary');
+            const submitBtn = document.getElementById('submitBtn');
+            
+            if (booking.service && booking.date && booking.time) {
+                summary.style.display = 'block';
+                
+                document.getElementById('summaryService').textContent = booking.serviceName;
+                document.getElementById('summaryDate').textContent = booking.date.toLocaleDateString('da-DK', {
+                    weekday: 'long',
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric'
+                });
+                document.getElementById('summaryTime').textContent = booking.time;
+                document.getElementById('summaryPrice').textContent = booking.price + ' kr';
+                
+                const name = document.getElementById('name').value;
+                const phone = document.getElementById('phone').value;
+                
+                submitBtn.disabled = !(name && phone);
+            } else {
+                summary.style.display = 'none';
+                submitBtn.disabled = true;
+            }
+        }
+
+        // Form inputs
+        document.getElementById('name').addEventListener('input', updateSummary);
+        document.getElementById('phone').addEventListener('input', updateSummary);
+
+        // Submit booking to Google Sheets
+        document.getElementById('submitBtn').addEventListener('click', async function() {
+            const name = document.getElementById('name').value;
+            const phone = document.getElementById('phone').value;
+            const email = document.getElementById('email').value;
+            const notes = document.getElementById('notes').value;
+            
+            const submitBtn = this;
+            const errorMessage = document.getElementById('errorMessage');
+            
+            // Show loading state
+            submitBtn.classList.add('loading');
+            submitBtn.disabled = true;
+            errorMessage.style.display = 'none';
+            
+            const bookingData = {
+                action: 'addBooking',
+                dato: booking.date.toISOString().split('T')[0],
+                tid: booking.time,
+                navn: name,
+                telefon: phone,
+                email: email,
+                behandling: booking.serviceName,
+                varighed: booking.duration,
+                pris: booking.price,
+                bemærkninger: notes,
+                status: 'Bekræftet',
+                oprettet: new Date().toISOString()
+            };
+            
+            try {
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors', // Google Apps Script requires this
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(bookingData)
+                });
+                
+                // With no-cors, we can't read the response, so we assume success
+                // Show confirmation
+                document.getElementById('confirmService').textContent = booking.serviceName;
+                document.getElementById('confirmDate').textContent = booking.date.toLocaleDateString('da-DK', {
+                    weekday: 'long',
+                    day: 'numeric',
+                    month: 'long'
+                });
+                document.getElementById('confirmTime').textContent = booking.time;
+                document.getElementById('confirmName').textContent = name;
+                
+                document.getElementById('bookingForm').style.display = 'none';
+                document.getElementById('confirmation').style.display = 'block';
+                
+            } catch (error) {
+                console.error('Fejl ved booking:', error);
+                errorMessage.textContent = 'Der opstod en fejl ved booking. Prøv venligst igen.';
+                errorMessage.style.display = 'block';
+                submitBtn.classList.remove('loading');
+                submitBtn.disabled = false;
+            }
+        });
+
+        // Initialize
+        generateCalendar();
+    </script>
+</body>
+</html>
