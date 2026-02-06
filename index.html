@@ -145,6 +145,12 @@
             position: relative;
         }
 
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: var(--accent);
+        }
+
         .calendar {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
@@ -418,35 +424,8 @@
                 <!-- Step 1: Service Selection -->
                 <div class="section">
                     <h2 class="section-title">Vælg behandling</h2>
-                    <div class="services">
-                        <div class="service-option" data-service="klipning" data-duration="45" data-price="350">
-                            <div class="service-name">Klipning</div>
-                            <div class="service-details">
-                                <span>45 min</span>
-                                <span>350 kr</span>
-                            </div>
-                        </div>
-                        <div class="service-option" data-service="farvning" data-duration="120" data-price="600">
-                            <div class="service-name">Farvning</div>
-                            <div class="service-details">
-                                <span>2 timer</span>
-                                <span>600 kr</span>
-                            </div>
-                        </div>
-                        <div class="service-option" data-service="fohn" data-duration="30" data-price="200">
-                            <div class="service-name">Føn</div>
-                            <div class="service-details">
-                                <span>30 min</span>
-                                <span>200 kr</span>
-                            </div>
-                        </div>
-                        <div class="service-option" data-service="highlights" data-duration="150" data-price="800">
-                            <div class="service-name">Highlights</div>
-                            <div class="service-details">
-                                <span>2½ timer</span>
-                                <span>800 kr</span>
-                            </div>
-                        </div>
+                    <div class="services" id="servicesContainer">
+                        <p class="loading">Indlæser behandlinger...</p>
                     </div>
                 </div>
 
@@ -553,6 +532,70 @@
             time: null
         };
 
+        // Load services from Google Sheets
+        async function loadServices() {
+            const container = document.getElementById('servicesContainer');
+            
+            try {
+                const response = await fetch(`${SCRIPT_URL}?action=getServices`);
+                const data = await response.json();
+                
+                if (data.status === 'success' && data.services && data.services.length > 0) {
+                    container.innerHTML = '';
+                    
+                    data.services.forEach(service => {
+                        const serviceDiv = document.createElement('div');
+                        serviceDiv.className = 'service-option';
+                        serviceDiv.dataset.service = service.name.toLowerCase().replace(/\s/g, '-');
+                        serviceDiv.dataset.duration = service.duration;
+                        serviceDiv.dataset.price = service.price;
+                        
+                        serviceDiv.innerHTML = `
+                            <div class="service-name">${service.name}</div>
+                            <div class="service-details">
+                                <span>${formatDuration(service.duration)}</span>
+                                <span>${service.price} kr</span>
+                            </div>
+                        `;
+                        
+                        serviceDiv.addEventListener('click', function() {
+                            document.querySelectorAll('.service-option').forEach(o => o.classList.remove('selected'));
+                            this.classList.add('selected');
+                            
+                            booking.service = this.dataset.service;
+                            booking.serviceName = service.name;
+                            booking.duration = this.dataset.duration;
+                            booking.price = this.dataset.price;
+                            
+                            updateSummary();
+                        });
+                        
+                        container.appendChild(serviceDiv);
+                    });
+                } else {
+                    container.innerHTML = '<p style="color: #c33;">Kunne ikke indlæse behandlinger. Tjek din forbindelse.</p>';
+                }
+            } catch (error) {
+                console.error('Fejl ved indlæsning af behandlinger:', error);
+                container.innerHTML = '<p style="color: #c33;">Fejl ved indlæsning. Prøv at genindlæse siden.</p>';
+            }
+        }
+
+        // Format duration
+        function formatDuration(minutes) {
+            if (minutes < 60) {
+                return `${minutes} min`;
+            } else {
+                const hours = Math.floor(minutes / 60);
+                const mins = minutes % 60;
+                if (mins === 0) {
+                    return `${hours} ${hours === 1 ? 'time' : 'timer'}`;
+                } else {
+                    return `${hours}:${String(mins).padStart(2, '0')} timer`;
+                }
+            }
+        }
+
         // Generate calendar
         function generateCalendar() {
             const calendar = document.getElementById('calendar');
@@ -567,7 +610,7 @@
             });
 
             const today = new Date();
-            const startDate = new Date(today);
+            today.setHours(0, 0, 0, 0);
             const daysToShow = 35;
             
             // Get the first day of the month
@@ -602,53 +645,63 @@
         }
 
         // Select date
-        function selectDate(date, element) {
+        async function selectDate(date, element) {
             document.querySelectorAll('.calendar-day').forEach(d => d.classList.remove('selected'));
             element.classList.add('selected');
             booking.date = date;
-            loadBookedTimes(date);
+            await loadAvailableTimes(date);
             updateSummary();
         }
 
-        // Load booked times from Google Sheets
-        async function loadBookedTimes(date) {
+        // Load available times from Google Sheets
+        async function loadAvailableTimes(date) {
             const timeSlotsContainer = document.getElementById('timeSlots');
-            timeSlotsContainer.innerHTML = '<p>Indlæser ledige tider...</p>';
+            timeSlotsContainer.innerHTML = '<p class="loading">Indlæser ledige tider...</p>';
             
             try {
                 const dateStr = date.toISOString().split('T')[0];
-                const response = await fetch(`${SCRIPT_URL}?action=getBookings&date=${dateStr}`);
-                const data = await response.json();
                 
-                generateTimeSlots(data.bookedTimes || []);
-            } catch (error) {
-                console.error('Fejl ved indlæsning af bookinger:', error);
-                // Fall back to generating slots without booked times
-                generateTimeSlots([]);
-            }
-        }
-
-        // Generate time slots
-        function generateTimeSlots(bookedTimes = []) {
-            const timeSlotsContainer = document.getElementById('timeSlots');
-            timeSlotsContainer.innerHTML = '';
-            
-            const slots = ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'];
-            
-            slots.forEach(time => {
-                const slot = document.createElement('div');
-                slot.className = 'time-slot';
-                slot.textContent = time;
+                // Get opening hours for this date
+                const hoursResponse = await fetch(`${SCRIPT_URL}?action=getOpeningHours&date=${dateStr}`);
+                const hoursData = await hoursResponse.json();
                 
-                if (bookedTimes.includes(time)) {
-                    slot.classList.add('booked');
-                    slot.textContent += ' (optaget)';
-                } else {
-                    slot.addEventListener('click', () => selectTime(time, slot));
+                if (hoursData.closed) {
+                    timeSlotsContainer.innerHTML = '<p style="text-align: center; color: #888;">Lukket denne dag</p>';
+                    return;
                 }
                 
-                timeSlotsContainer.appendChild(slot);
-            });
+                // Get booked times
+                const bookingsResponse = await fetch(`${SCRIPT_URL}?action=getBookings&date=${dateStr}`);
+                const bookingsData = await bookingsResponse.json();
+                
+                const bookedTimes = bookingsData.bookedTimes || [];
+                const timeSlots = hoursData.timeSlots || [];
+                
+                if (timeSlots.length === 0) {
+                    timeSlotsContainer.innerHTML = '<p style="text-align: center; color: #888;">Ingen ledige tider</p>';
+                    return;
+                }
+                
+                timeSlotsContainer.innerHTML = '';
+                
+                timeSlots.forEach(time => {
+                    const slot = document.createElement('div');
+                    slot.className = 'time-slot';
+                    slot.textContent = time;
+                    
+                    if (bookedTimes.includes(time)) {
+                        slot.classList.add('booked');
+                        slot.textContent += ' (optaget)';
+                    } else {
+                        slot.addEventListener('click', () => selectTime(time, slot));
+                    }
+                    
+                    timeSlotsContainer.appendChild(slot);
+                });
+            } catch (error) {
+                console.error('Fejl ved indlæsning af tider:', error);
+                timeSlotsContainer.innerHTML = '<p style="color: #c33;">Fejl ved indlæsning af tider</p>';
+            }
         }
 
         // Select time
@@ -658,21 +711,6 @@
             booking.time = time;
             updateSummary();
         }
-
-        // Service selection
-        document.querySelectorAll('.service-option').forEach(option => {
-            option.addEventListener('click', function() {
-                document.querySelectorAll('.service-option').forEach(o => o.classList.remove('selected'));
-                this.classList.add('selected');
-                
-                booking.service = this.dataset.service;
-                booking.serviceName = this.querySelector('.service-name').textContent;
-                booking.duration = this.dataset.duration;
-                booking.price = this.dataset.price;
-                
-                updateSummary();
-            });
-        });
 
         // Update summary
         function updateSummary() {
@@ -739,15 +777,14 @@
             try {
                 const response = await fetch(SCRIPT_URL, {
                     method: 'POST',
-                    mode: 'no-cors', // Google Apps Script requires this
+                    mode: 'no-cors',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify(bookingData)
                 });
                 
-                // With no-cors, we can't read the response, so we assume success
-                // Show confirmation
+                // With no-cors, we assume success
                 document.getElementById('confirmService').textContent = booking.serviceName;
                 document.getElementById('confirmDate').textContent = booking.date.toLocaleDateString('da-DK', {
                     weekday: 'long',
@@ -770,6 +807,7 @@
         });
 
         // Initialize
+        loadServices();
         generateCalendar();
     </script>
 </body>
